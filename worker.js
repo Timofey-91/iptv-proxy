@@ -4,7 +4,7 @@ export default {
     const path = url.pathname.replace(/^\/+/, ""); // убираем "/"
 
     // Загружаем config.json из GitHub Pages
-    const configUrl = "https://raw.githubusercontent.com/USERNAME/iptv-proxy/main/config.json";
+    const configUrl = "https://raw.githubusercontent.com/Timofey-91/iptv-proxy/refs/heads/main/config.json";
     const configResp = await fetch(configUrl);
     const config = await configResp.json();
 
