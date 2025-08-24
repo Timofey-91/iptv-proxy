@@ -1,0 +1,60 @@
+name: Update IPTV config
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # раз в 6 часов
+  workflow_dispatch:        # запуск вручную
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Update config.json
+        run: python update_config.py
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add config.json
+          git commit -m "Update config.json" || echo "No changes"
+          git push
+name: Update IPTV config
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # раз в 6 часов
+  workflow_dispatch:        # запуск вручную
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Update config.json
+        run: python update_config.py
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add config.json
+          git commit -m "Update config.json" || echo "No changes"
+          git push
