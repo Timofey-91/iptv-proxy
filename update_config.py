@@ -29,7 +29,9 @@ def update_config():
         print("Ошибка: не удалось получить токен.")
         return
 
-    channel = "tvc, rentv"
+    channel = {
+        "tvc", "rentv"
+    }
     channel_id = 16  # базовый ID
 
     offsets = {
