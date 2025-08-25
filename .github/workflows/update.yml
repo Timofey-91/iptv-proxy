@@ -3,7 +3,7 @@ permissions:
   contents: write
 on:
   schedule:
-    - cron: "0 */6 * * *"  # обновляем каждые 6 часов
+    - cron: "0 0 * * *"  # обновляем каждые 6 часов
   workflow_dispatch:
 
 jobs:
