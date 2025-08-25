@@ -3,7 +3,7 @@ export default {
     const url = new URL(request.url);
     const path = url.pathname.replace(/^\/+/, ""); // убираем "/"
 
-    // Загружаем config.json из GitHub
+    // Загружаем config.json с GitHub
     const configUrl = "https://raw.githubusercontent.com/Timofey-91/iptv-proxy/refs/heads/main/config.json";
     const configResp = await fetch(configUrl);
     const config = await configResp.json();
@@ -13,8 +13,9 @@ export default {
     }
 
     const targetUrl = config[path];
+    const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf("/") + 1);
 
-    // Берём плейлист у peers.tv
+    // Загружаем плейлист с peers.tv
     const resp = await fetch(targetUrl, {
       headers: {
         "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 8.0.1;)",
@@ -28,9 +29,13 @@ export default {
 
     let text = await resp.text();
 
-    // ⚡ Фикс: убираем вставку воркера перед ссылками
-    // Если в плейлисте уже абсолютные http/https — оставляем как есть
-    text = text.replace(/(https?:\/\/[^\s]+)/g, (match) => match);
+    // Переписываем все относительные ссылки на абсолютные
+    text = text.replace(/^(?!#)(.*\.m3u8|.*\.ts)(.*)$/gm, (match) => {
+      if (match.startsWith("http")) {
+        return match; // уже абсолютная
+      }
+      return baseUrl + match;
+    });
 
     return new Response(text, {
       headers: {
