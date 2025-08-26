@@ -3,7 +3,7 @@ permissions:
   contents: write
 on:
   schedule:
-    - cron: "0 0 * * 0"  # Раз в неделю — каждое воскресенье в 03:00 по Москве (00:00 UTC)
+    - cron: "0 0 * * *"  # Раз в сутки
   workflow_dispatch:
 
 jobs:
