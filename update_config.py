@@ -52,6 +52,30 @@ def update_config():
                 "rentv_plus4": 10,
             },
         },
+        "rentv": {  # РЕН ТВ +2
+            "id": 16,
+            "offsets": {
+                "rentv_plus2": 7200,
+            },
+        },
+        "sts_hd": {  # СТС HD
+            "id": 16,
+            "offsets": {
+                "sts_hd": 10,
+            },
+        },
+        "sts": {  # СТС +4
+            "id": 16,
+            "offsets": {
+                "sts_plus4": 10,
+            },
+        },
+        "sts": {  # СТС +2
+            "id": 16,
+            "offsets": {
+                "sts_plus2": 7200,
+            },
+        },
     }
 
     config = {}
