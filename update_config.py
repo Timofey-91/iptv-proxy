@@ -40,10 +40,15 @@ def update_config():
                 "tvc_plus7": 36000,
             },
         },
-        "ren_tv_hd": {
+        "ren_tv_hd": {  # РЕН ТВ HD
             "id": 16,
             "offsets": {
                 "ren_tv_hd": 10,
+            },
+        },
+        "rentv": {  # РЕН ТВ +4
+            "id": 16,
+            "offsets": {
                 "rentv_plus4": 10,
             },
         },
