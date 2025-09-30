@@ -29,21 +29,32 @@ def update_config():
         print("Ошибка: не удалось получить токен.")
         return
 
-    channel = "tvc"
-    channel_id = 16  # базовый ID
-
-    offsets = {
-        "rentv": 7200,
-        "tvc_plus2": 7200,
-        "tvc_plus4": 10,
-        "tvc_plus7": 36000,
+    # Все каналы для обновления
+    channels = {
+        "tvc": {
+            "id": 16,
+            "offsets": {
+                "tvc": 0,
+                "tvc_plus2": 7200,
+                "tvc_plus4": 10,
+                "tvc_plus7": 36000,
+            },
+        },
+        "ren_tv_hd": {
+            "id": 16,
+            "offsets": {
+                "ren_tv_hd": 10,
+                "rentv_plus4": 10,
+            },
+        },
     }
 
     config = {}
-    for name, offset in offsets.items():
-        url = get_stream_url(channel, channel_id, token, offset)
-        config[name] = url
-        print(f"{name} → {url}")
+    for base_channel, data in channels.items():
+        for name, offset in data["offsets"].items():
+            url = get_stream_url(base_channel, data["id"], token, offset)
+            config[name] = url
+            print(f"{name} → {url}")
 
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
