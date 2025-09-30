@@ -31,52 +31,43 @@ def update_config():
 
     # Все каналы для обновления
     channels = {
-        "tvc": {
-            "id": 16,
-            "offsets": {
-                "tvc": 0,
-                "tvc_plus2": 7200,
-                "tvc_plus4": 10,
-                "tvc_plus7": 36000,
-            },
+    "tvc": {
+        "id": 16,
+        "offsets": {
+            "tvc": 0,
+            "tvc_plus2": 7200,
+            "tvc_plus4": 10,
+            "tvc_plus7": 36000,
         },
-        "ren_tv_hd": {  # РЕН ТВ HD
-            "id": 16,
-            "offsets": {
-                "ren_tv_hd": 10,
-            },
+    },
+    "ren_tv_hd": {  # РЕН ТВ HD
+        "id": 16,
+        "offsets": {
+            "ren_tv_hd": 10,
         },
-        "rentv": {  # РЕН ТВ +4
-            "id": 16,
-            "offsets": {
-                "rentv_plus4": 10,
-            },
+    },
+    "rentv": {  # РЕН ТВ SD
+        "id": 16,  # ⚠️ ID нужно уточнить!
+        "offsets": {
+            "rentv_plus2": 7200,
+            "rentv_plus4": 10,
         },
-        "rentv": {  # РЕН ТВ +2
-            "id": 16,
-            "offsets": {
-                "rentv_plus2": 7200,
-            },
+    },
+    "sts_hd": {  # СТС HD
+        "id": 16,
+        "offsets": {
+            "sts_hd": 10,
         },
-        "sts_hd": {  # СТС HD
-            "id": 16,
-            "offsets": {
-                "sts_hd": 10,
-            },
+    },
+    "sts": {  # СТС SD
+        "id": 16,  # ⚠️ ID тоже нужно уточнить!
+        "offsets": {
+            "sts_plus2": 7200,
+            "sts_plus4": 10,
         },
-        "sts": {  # СТС +4
-            "id": 16,
-            "offsets": {
-                "sts_plus4": 10,
-            },
-        },
-        "sts": {  # СТС +2
-            "id": 16,
-            "offsets": {
-                "sts_plus2": 7200,
-            },
-        },
-    }
+    },
+}
+
 
     config = {}
     for base_channel, data in channels.items():
