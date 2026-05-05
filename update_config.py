@@ -66,6 +66,18 @@ def update_config():
             "sts_plus4": 10,
         },
     },
+    "russian_roman": {  # Русский роман
+        "id": 16,
+        "offsets": {
+            "russian_roman": 10,
+        },
+    },
+    "friday": {  # Пятница
+        "id": 16,
+        "offsets": {
+            "friday": 10,
+        },
+    },
 }
 
 
