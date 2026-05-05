@@ -78,6 +78,12 @@ def update_config():
             "friday": 10,
         },
     },
+    "star_family_hd": {  # Star Family HD
+        "id": 16,
+        "offsets": {
+            "star_family_hd": 10,
+        },
+    },
 }
 
 
