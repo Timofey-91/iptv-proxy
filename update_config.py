@@ -10,7 +10,7 @@ CONFIG_FILE = "config.json"
 
 def get_token():
     """Получаем access_token с PeersTV"""
-    url = "http://api.peers.tv/auth/2/token"
+    url = "http://api.peers.tv/auth/1/token"
     payload = "grant_type=inetra%3Aanonymous&client_id=29783051&client_secret=b4d4eb438d760da95f0acb5bc6b5c760"
     headers = {"User-Agent": USER_AGENT, "Content-Type": "application/x-www-form-urlencoded"}
     response = requests.post(url, data=payload, headers=headers, timeout=8)
