@@ -87,7 +87,10 @@ def update_config():
 }
 
 
-        config = {}
+     # ... здесь заканчивается ваш словарь channels ...
+    }
+
+    config = {}
     for base_channel, data in channels.items():
         for name, offset in data["offsets"].items():
             url = get_stream_url(base_channel, data["id"], token, offset)
@@ -100,8 +103,8 @@ def update_config():
                 old_config = json.load(f)
             
             # Проверяем, изменился ли токен (ищем его в любой из ссылок)
-            old_url = list(old_config.values())[0] if old_config else ""
-            if f"token={token}" in old_url:
+            old_urls = list(old_config.values()) if old_config else []
+            if old_urls and f"token={token}" in old_urls[0]:
                 print("Токен не изменился. Перезапись файла не требуется.")
                 return # Выходим без перезаписи файла
         except Exception:
