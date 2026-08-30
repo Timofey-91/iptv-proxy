@@ -87,15 +87,30 @@ def update_config():
 }
 
 
-    config = {}
+        config = {}
     for base_channel, data in channels.items():
         for name, offset in data["offsets"].items():
             url = get_stream_url(base_channel, data["id"], token, offset)
             config[name] = url
-            print(f"{name} → {url}")
 
+    # Считываем старый конфиг, чтобы сравнить токены
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                old_config = json.load(f)
+            
+            # Проверяем, изменился ли токен (ищем его в любой из ссылок)
+            old_url = list(old_config.values())[0] if old_config else ""
+            if f"token={token}" in old_url:
+                print("Токен не изменился. Перезапись файла не требуется.")
+                return # Выходим без перезаписи файла
+        except Exception:
+            pass # Если файл битый, просто перезапишем его
+
+    # Записываем только если токен действительно новый
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
+    print("Конфигурация успешно обновлена со свежим токеном.")
 
 if __name__ == "__main__":
     update_config()
