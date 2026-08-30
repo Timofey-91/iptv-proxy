@@ -31,63 +31,59 @@ def update_config():
 
     # Все каналы для обновления
     channels = {
-    "tvc": {
-        "id": 16,
-        "offsets": {
-            "tvc": 0,
-            "tvc_plus2": 7200,
-            "tvc_plus4": 10,
-            "tvc_plus7": 36000,
+        "tvc": {
+            "id": 16,
+            "offsets": {
+                "tvc": 0,
+                "tvc_plus2": 7200,
+                "tvc_plus4": 10,
+                "tvc_plus7": 36000,
+            },
         },
-    },
-    "ren_tv_hd": {  # РЕН ТВ HD
-        "id": 16,
-        "offsets": {
-            "ren_tv_hd": 10,
+        "ren_tv_hd": {  # РЕН ТВ HD
+            "id": 16,
+            "offsets": {
+                "ren_tv_hd": 10,
+            },
         },
-    },
-    "rentv": {  # РЕН ТВ SD
-        "id": 16,  # ⚠️ ID нужно уточнить!
-        "offsets": {
-            "rentv_plus2": 7200,
-            "rentv_plus4": 10,
+        "rentv": {  # РЕН ТВ SD
+            "id": 16,
+            "offsets": {
+                "rentv_plus2": 7200,
+                "rentv_plus4": 10,
+            },
         },
-    },
-    "sts_hd": {  # СТС HD
-        "id": 16,
-        "offsets": {
-            "sts_hd": 10,
+        "sts_hd": {  # СТС HD
+            "id": 16,
+            "offsets": {
+                "sts_hd": 10,
+            },
         },
-    },
-    "sts": {  # СТС SD
-        "id": 16,  # ⚠️ ID тоже нужно уточнить!
-        "offsets": {
-            "sts_plus2": 7200,
-            "sts_plus4": 10,
+        "sts": {  # СТС SD
+            "id": 16,
+            "offsets": {
+                "sts_plus2": 7200,
+                "sts_plus4": 10,
+            },
         },
-    },
-    "russian_roman": {  # Русский роман
-        "id": 16,
-        "offsets": {
-            "russian_roman": 10,
+        "russian_roman": {  # Русский роман
+            "id": 16,
+            "offsets": {
+                "russian_roman": 10,
+            },
         },
-    },
-    "friday": {  # Пятница
-        "id": 16,
-        "offsets": {
-            "friday": 10,
+        "friday": {  # Пятница
+            "id": 16,
+            "offsets": {
+                "friday": 10,
+            },
         },
-    },
-    "star_family_hd": {  # Star Family HD
-        "id": 16,
-        "offsets": {
-            "star_family_hd": 10,
+        "star_family_hd": {  # Star Family HD
+            "id": 16,
+            "offsets": {
+                "star_family_hd": 10,
+            },
         },
-    },
-}
-
-
-     # ... здесь заканчивается ваш словарь channels ...
     }
 
     config = {}
@@ -102,13 +98,13 @@ def update_config():
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 old_config = json.load(f)
             
-            # Проверяем, изменился ли токен (ищем его в любой из ссылок)
-            old_urls = list(old_config.values()) if old_config else []
+            # Извлекаем первый URL из старого конфига для проверки
+            old_urls = list(old_config.values())
             if old_urls and f"token={token}" in old_urls[0]:
                 print("Токен не изменился. Перезапись файла не требуется.")
                 return # Выходим без перезаписи файла
         except Exception:
-            pass # Если файл битый, просто перезапишем его
+            pass # Если файл битый или пустой, запишем заново
 
     # Записываем только если токен действительно новый
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
