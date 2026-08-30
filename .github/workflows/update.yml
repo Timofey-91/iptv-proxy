@@ -5,8 +5,8 @@ permissions:
 
 on:
   schedule:
-    - cron: "0 */12 * * *" # Строго раз в 12 часов (в 00:00 и 12:00)
-  workflow_dispatch: # Оставляем кнопку для ручного запуска
+    - cron: "0 */12 * * *" # Запуск раз в 12 часов
+  workflow_dispatch: # Кнопка для ручного запуска
 
 jobs:
   update:
@@ -25,14 +25,15 @@ jobs:
         run: pip install requests
 
       - name: Update config.json
+        env:
+          # Привязываем секрет репозитория к скрипту Python
+          PEERS_TOKEN: ${{ secrets.PEERS_TOKEN }} 
         run: python update_config.py
 
-      - name: Force Commit (История остается чистой)
+      - name: Force Commit
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add config.json
-          
-          # Перезаписываем один и тот же коммит автоматизации
           git commit --amend -m "chore: auto-update IPTV links" || git commit -m "chore: auto-update IPTV links"
           git push --force origin HEAD:${{ github.ref_name }}
