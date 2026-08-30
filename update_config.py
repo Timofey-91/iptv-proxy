@@ -4,13 +4,13 @@ import json
 import os
 
 USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 8.0.1;)"
-REFERRER = "https://peers.tv"
+REFERRER = "https://peers.tv/"
 
 CONFIG_FILE = "config.json"
 
 def get_token():
     """Получаем access_token с PeersTV"""
-    url = "http://peers.tv"
+    url = "http://api.peers.tv/auth/2/token"
     payload = "grant_type=inetra%3Aanonymous&client_id=29783051&client_secret=b4d4eb438d760da95f0acb5bc6b5c760"
     headers = {"User-Agent": USER_AGENT, "Content-Type": "application/x-www-form-urlencoded"}
     response = requests.post(url, data=payload, headers=headers, timeout=8)
@@ -20,7 +20,7 @@ def get_token():
 
 def get_stream_url(channel, channel_id, token, offset):
     """Получаем оригинальный плейлист PeersTV"""
-    base_url = f"http://peers.tv{channel}/{channel_id}/playlist.m3u8"
+    base_url = f"http://api.peers.tv/timeshift/{channel}/{channel_id}/playlist.m3u8"
     return f"{base_url}?token={token}&offset={offset}"
 
 def update_config():
@@ -47,7 +47,7 @@ def update_config():
             },
         },
         "rentv": {  # РЕН ТВ SD
-            "id": 16,
+            "id": 16,  # ⚠️ ID нужно уточнить!
             "offsets": {
                 "rentv_plus2": 7200,
                 "rentv_plus4": 10,
@@ -60,7 +60,7 @@ def update_config():
             },
         },
         "sts": {  # СТС SD
-            "id": 16,
+            "id": 16,  # ⚠️ ID тоже нужно уточнить!
             "offsets": {
                 "sts_plus2": 7200,
                 "sts_plus4": 10,
