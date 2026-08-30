@@ -9,14 +9,18 @@ REFERRER = "https://peers.tv/"
 CONFIG_FILE = "config.json"
 
 def get_token():
-    """Получаем access_token с PeersTV"""
-    url = "http://api.peers.tv/auth/2/token"
+    url = "http://peers.tv"
     payload = "grant_type=inetra%3Aanonymous&client_id=29783051&client_secret=b4d4eb438d760da95f0acb5bc6b5c760"
-    headers = {"User-Agent": USER_AGENT, "Content-Type": "application/x-www-form-urlencoded"}
+    headers = {
+        "User-Agent": "Peers.TV/7.5.1 (Samsung; Tizen 5.5)", # Маскируемся под Smart TV
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-Device-Id": "1234567890abcdef" # Статичный ID устройства для продления сессии
+    }
     response = requests.post(url, data=payload, headers=headers, timeout=8)
     if response.status_code != 200:
         return None
     return re.search(r'"access_token":"([^"]+)"', response.text).group(1)
+
 
 def get_stream_url(channel, channel_id, token, offset):
     """Получаем оригинальный плейлист PeersTV"""
@@ -91,25 +95,13 @@ def update_config():
         for name, offset in data["offsets"].items():
             url = get_stream_url(base_channel, data["id"], token, offset)
             config[name] = url
+            print(f"{name} → {url}")
 
-    # Считываем старый конфиг, чтобы сравнить токены
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                old_config = json.load(f)
-            
-            # Извлекаем первый URL из старого конфига для проверки
-            old_urls = list(old_config.values())
-            if old_urls and f"token={token}" in old_urls[0]:
-                print("Токен не изменился. Перезапись файла не требуется.")
-                return # Выходим без перезаписи файла
-        except Exception:
-            pass # Если файл битый или пустой, запишем заново
-
-    # Записываем только если токен действительно новый
+    # Записываем конфиг на Гитхаб каждый раз при запуске экшена
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
-    print("Конфигурация успешно обновлена со свежим токеном.")
+    print("Конфигурация успешно обновлена на GitHub.")
 
 if __name__ == "__main__":
     update_config()
+
