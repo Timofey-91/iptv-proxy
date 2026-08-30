@@ -1,28 +1,47 @@
 name: Update IPTV links
+
 permissions:
   contents: write
+
 on:
   schedule:
-    - cron: "0 */1 * * *" # Каждые 12 часов
+    - cron: "0 * * * *" # Строго раз в час (в 00 минут)
   workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Загружаем минимальную историю для безопасности операции
+
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+
       - name: Install requirements
         run: pip install requests
+
       - name: Update config.json
         run: python update_config.py
-      - name: Commit changes
+
+      - name: Force Commit (Keep history clean)
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@://github.com"
+          
+          # Проверяем, изменился ли токен/файл
+          if git diff --quiet config.json; then
+            echo "Изменений нет, токен еще валиден. Завершаем работу."
+            exit 0
+          fi
+          
           git add config.json
-          git commit -m "Update IPTV links" || echo "No changes"
-          git push
+          
+          # АМЕНДМЕНТ: Перезаписываем предыдущий коммит, чтобы не плодить историю
+          git commit --amend -m "chore: auto-update IPTV config" || git commit -m "chore: auto-update IPTV config"
+          
+          # FORCE PUSH: Принудительно пушим поверх, сохраняя ветку чистой
+          git push --force origin HEAD:${{ github.ref_name }}
