@@ -6,7 +6,7 @@ permissions:
 on:
   schedule:
     - cron: "0 * * * *" # Строго раз в час (в 00 минут)
-  workflow_dispatch:
+  workflow_dispatch:   # Кнопка для ручного запуска
 
 jobs:
   update:
@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # Загружаем минимальную историю для безопасности операции
+          fetch-depth: 2 # Загружаем минимальную историю для безопасного Force Push
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -27,21 +27,21 @@ jobs:
       - name: Update config.json
         run: python update_config.py
 
-      - name: Force Commit (Keep history clean)
+      - name: Force Commit & Push (Защита от блокировок GitHub)
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@://github.com"
           
-          # Проверяем, изменился ли токен/файл
+          # Если скрипт выше решил не менять файл (токен тот же), то завершаем работу
           if git diff --quiet config.json; then
-            echo "Изменений нет, токен еще валиден. Завершаем работу."
+            echo "Изменений в файле нет. Пропускаем push."
             exit 0
           fi
           
           git add config.json
           
-          # АМЕНДМЕНТ: Перезаписываем предыдущий коммит, чтобы не плодить историю
+          # Перезаписываем предыдущий коммит автоматизации (сохраняем историю чистой)
           git commit --amend -m "chore: auto-update IPTV config" || git commit -m "chore: auto-update IPTV config"
           
-          # FORCE PUSH: Принудительно пушим поверх, сохраняя ветку чистой
-          git push --force origin HEAD:${{ github.ref_name }}
+          # Принудительно заменяем коммит на сервере GitHub
+          git push --force origin HEAD:${{{ github.ref_name }}}
