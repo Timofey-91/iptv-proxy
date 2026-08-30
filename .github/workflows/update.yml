@@ -44,4 +44,4 @@ jobs:
           git commit --amend -m "chore: auto-update IPTV config" || git commit -m "chore: auto-update IPTV config"
           
           # Принудительно заменяем коммит на сервере GitHub
-          git push --force origin HEAD:${{{ github.ref_name }}}
+          git push --force origin HEAD:${{ github.ref_name }}
