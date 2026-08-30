@@ -1,39 +1,28 @@
 name: Update IPTV links
-
 permissions:
   contents: write
-
 on:
   schedule:
-    - cron: "0 */12 * * *" # Запуск раз в 12 часов
-  workflow_dispatch: # Кнопка для ручного запуска
+    - cron: "0 * * * *" # Запуск СТРОГО КАЖДЫЙ ЧАС (в 00 минут)
+  workflow_dispatch:
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
+      - uses: actions/checkout@v3
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: "3.x"
-
       - name: Install requirements
         run: pip install requests
-
       - name: Update config.json
-        env:
-          # Привязываем секрет репозитория к скрипту Python
-          PEERS_TOKEN: ${{ secrets.PEERS_TOKEN }} 
         run: python update_config.py
-
-      - name: Force Commit
+      - name: Commit changes
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
           git add config.json
-          git commit --amend -m "chore: auto-update IPTV links" || git commit -m "chore: auto-update IPTV links"
-          git push --force origin HEAD:${{ github.ref_name }}
+          git commit -m "Update IPTV links" || echo "No changes"
+          git push
