@@ -3,7 +3,7 @@ permissions:
   contents: write
 on:
   schedule:
-    - cron: "0 * * * *" # Запуск ровно в 00 минут каждого часа
+    - cron: "*/30 * * * *" # ИСПРАВЛЕНО: Запуск каждые 30 минут для стабильного удержания токена
   workflow_dispatch:
 
 jobs:
