@@ -15,7 +15,7 @@ def get_token():
 
     payload = (
         "grant_type=inetra%3Aanonymous"
-        "&client_id=561128507"
+        "&client_id=29783051"
         "&client_secret=b4d4eb438d760da95f0acb5bc6b5c760"
     )
 
