@@ -11,7 +11,7 @@ CONFIG_FILE = "config.json"
 def get_token():
     """Получаем access_token с PeersTV"""
 
-    url = "http://old.peers.tv/auth/2/token"
+    url = "http://api-msk.peers.tv/auth/2/token"
 
     payload = (
         "grant_type=inetra%3Aanonymous"
