@@ -56,7 +56,7 @@ def get_stream_url(channel, channel_id, token, offset):
     """Формируем оригинальную ссылку PeersTV"""
 
     base_url = (
-        f"http://api-nsk.peers.tv/"
+        f"http://nsk5.peers.tv/"
         f"timeshift/{channel}/{channel_id}/playlist.m3u8"
     )
 
