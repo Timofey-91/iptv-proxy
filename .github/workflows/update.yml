@@ -1,6 +1,6 @@
-"name: Update IPTV link
+name: Update IPTV link
 
-"on:
+on:
   schedule:
     - cron: "15 */4 * * *" # НАСТРОЕНО: Запуск каждые 4 часа в свободную от очередей 11-ю минуту!
   workflow_dispatch:
