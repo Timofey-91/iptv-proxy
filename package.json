@@ -1,0 +1,12 @@
+{
+  "name": "peers-iptv-proxy",
+  "version": "1.0.0",
+  "description": "Peers.TV M3U8 proxy for IPTV clients",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
