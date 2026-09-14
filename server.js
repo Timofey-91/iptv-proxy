@@ -55,12 +55,10 @@ async function loadConfig(source) {
     }
   }
 
-
   const configUrl =
     source === "primary"
       ? PRIMARY_CONFIG_URL
       : BACKUP_CONFIG_URL;
-
 
   console.log(`Loading ${source} config...`);
 
@@ -72,23 +70,19 @@ async function loadConfig(source) {
     }
   });
 
-
   if (!response.ok) {
     throw new Error(
       `${source} config HTTP ${response.status}`
     );
   }
 
-
   const config = await response.json();
-
 
   if (!config || typeof config !== "object") {
     throw new Error(
       `${source} config is invalid`
     );
   }
-
 
   if (source === "primary") {
     primaryConfig = config;
@@ -97,7 +91,6 @@ async function loadConfig(source) {
     backupConfig = config;
     backupConfigExpiresAt = now + CONFIG_CACHE_TIME;
   }
-
 
   return config;
 }
@@ -190,18 +183,15 @@ function processM3U8(body, targetUrl) {
     ""
   );
 
-
   // Убираем tvc_plusN из путей
   body = body.replace(
     /\/tvc_plus\d+\//g,
     "/"
   );
 
-
   const baseUrl = new URL(targetUrl);
 
   const lines = body.split(/\r?\n/);
-
 
   return lines
     .map((line) => {
@@ -212,18 +202,15 @@ function processM3U8(body, targetUrl) {
         return line;
       }
 
-
       // M3U8-комментарии
       if (trimmed.startsWith("#")) {
         return line;
       }
 
-
       // Уже абсолютный URL
       if (/^https?:\/\//i.test(trimmed)) {
         return line;
       }
-
 
       // Относительный URL -> абсолютный
       try {
@@ -314,6 +301,38 @@ const server = http.createServer(
       );
 
 
+      // ------------------------------------------------------
+      // Health check для SnapDeploy
+      // ------------------------------------------------------
+
+      if (
+        requestUrl.pathname === "/health" ||
+        requestUrl.pathname === "/healthz" ||
+        requestUrl.pathname === "/actuator/health" ||
+        requestUrl.pathname === "/api/health"
+      ) {
+
+        response.writeHead(
+          200,
+          {
+            "Content-Type":
+              "application/json; charset=utf-8",
+
+            "Cache-Control":
+              "no-store"
+          }
+        );
+
+        response.end(
+          JSON.stringify({
+            status: "ok"
+          })
+        );
+
+        return;
+      }
+
+
       let channel =
         requestUrl.pathname
           .replace(/^\/+/, "")
@@ -336,7 +355,6 @@ const server = http.createServer(
               "no-store"
           }
         );
-
 
         response.end(
           "Peers IPTV proxy is working.\n\n" +
