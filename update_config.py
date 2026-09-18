@@ -1,6 +1,7 @@
 import requests
 import re
 import json
+import time  # <--- Добавили модуль времени
 
 USER_AGENT = "Dalvik/2.1.0 (Linux; U; Android 8.0.1;)"
 REFERRER = "https://peers.tv/"
@@ -11,7 +12,7 @@ CONFIG_FILE = "config.json"
 def get_token():
     """Получаем access_token с PeersTV"""
 
-    url = "http://api.msk.peers.tv/auth/2/token"
+    url = "http://api.spb.peers.tv/auth/2/token"
 
     payload = (
         "grant_type=inetra%3Aanonymous"
@@ -56,7 +57,7 @@ def get_stream_url(channel, channel_id, token, offset):
     """Формируем оригинальную ссылку PeersTV"""
 
     base_url = (
-        f"http://api.msk.peers.tv/"
+        f"http://api.spb.peers.tv/"
         f"timeshift/{channel}/{channel_id}/playlist.m3u8"
     )
 
@@ -132,7 +133,10 @@ def update_config():
         },
     }
 
-    config = {}
+    # Включаем метку времени обновления прямо в конфиг
+    config = {
+        "updated_at": int(time.time())  # <--- Добавили Unix-время в секундах
+    }
 
     for base_channel, data in channels.items():
 
@@ -159,7 +163,7 @@ def update_config():
         )
 
     print()
-    print(f"Config обновлён. Каналов: {len(config)}")
+    print(f"Config обновлён. Время: {config['updated_at']}. Элементов: {len(config)}")
 
 
 if __name__ == "__main__":
