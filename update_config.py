@@ -131,6 +131,13 @@ def update_config():
                 "star_family_hd": 10,
             },
         },
+           
+        "mosfilm_zolotaya_kollektsiya_hd": {
+            "id": 16,
+            "offsets": {
+                "mosfilm_zolotaya_kollektsiya_hd": 10,
+            },
+        },
     }
 
     # Включаем метку времени обновления прямо в конфиг
