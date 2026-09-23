@@ -1,75 +1,57 @@
 const fs = require('fs');
 
 async function parseTivixMosfilm() {
-  const url = 'http://live.tivix.co/450-mosfilm.html';
-  
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Referer': 'http://live.tivix.co/',
-        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7'
-      }
-    });
+  const pageUrl = 'http://live.tivix.co/450-mosfilm.html';
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Referer': 'http://live.tivix.co/'
+  };
 
-    if (!response.ok) {
-      throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-    }
+  try {
+    // 1. Загружаем HTML страницы
+    const response = await fetch(pageUrl, { headers });
+    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
 
     const html = await response.text();
-    let streamUrl = null;
+    let rawStreamUrl = null;
 
-    // 1. Поиск file: decode("...")
+    // 2. Находим декодированную ссылку file: decode("...")
     const decodeMatch = html.match(/file:\s*decode\(["']([^"']+)["']\)/i);
     if (decodeMatch) {
-      streamUrl = Buffer.from(decodeMatch[1], 'base64').toString('utf-8');
+      rawStreamUrl = Buffer.from(decodeMatch[1], 'base64').toString('utf-8');
+    } else {
+      const directMatch = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i);
+      if (directMatch) rawStreamUrl = directMatch[1];
     }
 
-    // 2. Поиск прямой ссылки .m3u8 в исходном коде
-    if (!streamUrl) {
-      const directMatch = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i) || 
-                          html.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/i);
-      if (directMatch) {
-        streamUrl = directMatch[1];
+    if (!rawStreamUrl) throw new Error('Ссылка не найдена в исходном коде страницы');
+
+    // Убираем маркеры качества вида [720p]
+    if (rawStreamUrl.includes(']')) {
+      rawStreamUrl = rawStreamUrl.split(']').pop();
+    }
+
+    console.log('[Tivix] Первичная ссылка:', rawStreamUrl);
+
+    // 3. Переходим по 302-редиректу для получения прямой ссылки с хэшем
+    let finalStreamUrl = rawStreamUrl;
+    try {
+      const resRedirect = await fetch(rawStreamUrl, {
+        method: 'GET',
+        headers: headers,
+        redirect: 'follow'
+      });
+      
+      if (resRedirect.url && resRedirect.url !== rawStreamUrl) {
+        finalStreamUrl = resRedirect.url;
+        console.log('[Tivix] Успешно получена прямая ссылка с хэшем:', finalStreamUrl);
       }
+    } catch (e) {
+      console.warn('[Tivix] Предупреждение при редиректе, используем первичную ссылку:', e.message);
     }
 
-    // 3. Поиск ссылки на фрейм плеера (iframe)
-    if (!streamUrl) {
-      const iframeMatch = html.match(/<iframe[^>]+src=["']([^"']+)["']/i);
-      if (iframeMatch) {
-        console.log('[Tivix] Найден iframe плеера:', iframeMatch[1]);
-        // Если найден iframe, делаем запрос к нему
-        let iframeUrl = iframeMatch[1];
-        if (iframeUrl.startsWith('//')) iframeUrl = 'http:' + iframeUrl;
-        
-        const iframeRes = await fetch(iframeUrl, { headers: { 'Referer': url } });
-        const iframeHtml = await iframeRes.text();
-        
-        const iframeDecode = iframeHtml.match(/file:\s*decode\(["']([^"']+)["']\)/i) ||
-                             iframeHtml.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i);
-        if (iframeDecode) {
-          streamUrl = iframeDecode[1].includes('decode') ? 
-            Buffer.from(iframeDecode[1], 'base64').toString('utf-8') : iframeDecode[1];
-        }
-      }
-    }
-
-    if (!streamUrl) {
-      console.log('--- ПРЕВЬЮ ПОЛУЧЕННОЙ СТРАНИЦЫ (ПЕРВЫЕ 500 СИМВОЛОВ) ---');
-      console.log(html.slice(0, 500));
-      console.log('------------------------------------------------------');
-      throw new Error('Ссылка .m3u8 не найдена в исходном коде страницы');
-    }
-
-    // Очистка селектора качества [720p]
-    if (streamUrl.includes(']')) {
-      streamUrl = streamUrl.split(']').pop();
-    }
-
-    console.log('[Tivix] Успешно найдена ссылка:', streamUrl);
-
-    const output = { mosfilm: streamUrl };
+    // 4. Записываем результат в streams.json
+    const output = { mosfilm: finalStreamUrl };
     fs.writeFileSync('streams.json', JSON.stringify(output, null, 2));
 
   } catch (err) {
