@@ -42,7 +42,7 @@ async function parseStream() {
       path = Buffer.from(encodedString, 'base64').toString('utf-8');
     }
 
-    const streamUrl = path.startsWith('http') ? path : `http://rodnoetv.com${path}`;
+    const streamUrl = path.startsWith('http') ? path : `http://xittv.net${path}`;
 
     const data = {
       mosfilm: streamUrl,
