@@ -1,19 +1,21 @@
 const fs = require('fs');
-const axios = require('axios');
 
 async function parseTivixMosfilm() {
   const url = 'http://live.tivix.co/450-mosfilm.html';
   
   try {
-    const response = await axios.get(url, {
+    const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Referer': 'http://live.tivix.co/'
-      },
-      timeout: 15000
+      }
     });
 
-    const html = response.data;
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+
+    const html = await response.text();
     let streamUrl = null;
 
     // 1. Поиск file: decode("...")
@@ -39,7 +41,7 @@ async function parseTivixMosfilm() {
 
     console.log('[Tivix] Найдена ссылка:', streamUrl);
 
-    // Сохраняем в streams.json
+    // Сохраняем результат
     const output = { mosfilm: streamUrl };
     fs.writeFileSync('streams.json', JSON.stringify(output, null, 2));
 
