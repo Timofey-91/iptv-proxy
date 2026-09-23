@@ -2,85 +2,52 @@ const fs = require('fs');
 
 async function parseTivixMosfilm() {
   const pageUrl = 'http://live.tivix.co/450-mosfilm.html';
-  const baseHeaders = {
+  const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Referer': pageUrl
+    'Referer': pageUrl,
+    'Origin': 'http://live.tivix.co'
   };
 
   try {
-    // 1. Получаем HTML страницы и куки сессии
-    const response = await fetch(pageUrl, { headers: baseHeaders });
-    if (!response.ok) throw new Error(`Ошибка загрузки HTML страницы: ${response.status}`);
-
-    let cookies = '';
-    if (typeof response.headers.getSetCookie === 'function') {
-      cookies = response.headers.getSetCookie().map(c => c.split(';')[0]).join('; ');
-    } else {
-      const rawCookie = response.headers.get('set-cookie');
-      if (rawCookie) cookies = rawCookie.split(',').map(c => c.split(';')[0]).join('; ');
-    }
-
+    // 1. Получаем HTML
+    const response = await fetch(pageUrl, { headers });
     const html = await response.text();
-    let rawStreamUrl = null;
 
-    // 2. Извлекаем зашифрованную ссылку из decode("...")
-    const decodeMatch = html.match(/file:\s*decode\(["']([^"']+)["']\)/i) || 
-                        html.match(/decode\(["']([^"']+)["']\)/i);
+    const decodeMatch = html.match(/file:\s*decode\(["']([^"']+)["']\)/i);
+    if (!decodeMatch) throw new Error('decode() не найден');
 
-    if (decodeMatch && decodeMatch[1]) {
-      rawStreamUrl = Buffer.from(decodeMatch[1], 'base64').toString('utf-8');
-    } else {
-      const directMatch = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i) || 
-                          html.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/i);
-      if (directMatch) rawStreamUrl = directMatch[1];
-    }
+    let rawStreamUrl = Buffer.from(decodeMatch[1], 'base64').toString('utf-8');
+    if (rawStreamUrl.includes(']')) rawStreamUrl = rawStreamUrl.split(']').pop();
 
-    if (!rawStreamUrl) {
-      console.error('Не удалось найти плеер. Ответ сервера (первые 300 символов):\n', html.slice(0, 300));
-      throw new Error('Ссылка .m3u8 не найдена в исходном коде');
-    }
+    console.log('[1] Первичный URL:', rawStreamUrl);
 
-    if (rawStreamUrl.includes(']')) {
-      rawStreamUrl = rawStreamUrl.split(']').pop();
-    }
-
-    console.log('[Tivix] Первичный URL плейлиста:', rawStreamUrl);
-
-    // 3. Делаем запрос к первичному URL с redirect: 'manual' для перехвата 302
-    const streamHeaders = {
-      'User-Agent': baseHeaders['User-Agent'],
-      'Referer': pageUrl,
-      'Origin': 'http://live.tivix.co',
-      'Accept': '*/*'
-    };
-
-    if (cookies) streamHeaders['Cookie'] = cookies;
-
+    // 2. Делаем запрос с redirect: 'manual'
     const res302 = await fetch(rawStreamUrl, {
       method: 'GET',
-      headers: streamHeaders,
+      headers: headers,
       redirect: 'manual'
     });
 
-    let finalStreamUrl = rawStreamUrl;
-    const locationHeader = res302.headers.get('location');
+    console.log('[2] Статус ответа сервера:', res302.status);
+    
+    // Выводим ВСЕ заголовки, которые прислал сервер
+    console.log('[3] Заголовки ответа:');
+    res302.headers.forEach((val, key) => console.log(`   ${key}: ${val}`));
 
-    // 4. Перехватываем относительный Location и преобразуем в абсолютную ссылку
-    if (locationHeader) {
-      finalStreamUrl = new URL(locationHeader, rawStreamUrl).href;
-      console.log('[Tivix] Перехвачена прямая ссылка из 302 Location:', finalStreamUrl);
+    let finalStreamUrl = rawStreamUrl;
+    const location = res302.headers.get('location');
+
+    if (location) {
+      finalStreamUrl = new URL(location, rawStreamUrl).href;
+      console.log('[+] УСПЕХ! Прямой URL:', finalStreamUrl);
     } else {
-      console.warn(`[Tivix] Заголовок Location не получен (статус ${res302.status}). Сохранен первичный URL.`);
+      console.log('[-] Заголовок location отсутствует в ответе.');
     }
 
-    // 5. Записываем результат в streams.json
     fs.writeFileSync('streams.json', JSON.stringify({ mosfilm: finalStreamUrl }, null, 2));
-    console.log('[Tivix] Поток успешно сохранен в streams.json');
 
   } catch (err) {
-    console.error('[Tivix] Ошибка парсинга:', err.message);
+    console.error('Ошибка:', err.message);
     process.exit(1);
   }
 }
