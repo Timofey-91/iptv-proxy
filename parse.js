@@ -3,56 +3,67 @@ const fs = require('fs');
 async function parseTivixMosfilm() {
   const pageUrl = 'http://live.tivix.co/450-mosfilm.html';
   const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
     'Referer': 'http://live.tivix.co/'
   };
 
   try {
-    // 1. Загружаем HTML страницы
     const response = await fetch(pageUrl, { headers });
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+    console.log(`[Tivix] Статус ответа: ${response.status}`);
 
     const html = await response.text();
+
+    // Проверка на заглушку антибота
+    if (html.includes('cf-browser-verification') || html.includes('ddos-guard') || html.includes('Just a moment')) {
+      console.error('[Tivix] Запрос заблокирован антиботом (Cloudflare/DDoS-Guard).');
+      console.log('Первые 300 символов ответа:\n', html.slice(0, 300));
+      process.exit(1);
+    }
+
     let rawStreamUrl = null;
 
-    // 2. Находим декодированную ссылку file: decode("...")
+    // 1. Поиск file: decode("...")
     const decodeMatch = html.match(/file:\s*decode\(["']([^"']+)["']\)/i);
     if (decodeMatch) {
       rawStreamUrl = Buffer.from(decodeMatch[1], 'base64').toString('utf-8');
     } else {
-      const directMatch = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i);
+      // 2. Поиск прямой ссылки
+      const directMatch = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i) || 
+                          html.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/i);
       if (directMatch) rawStreamUrl = directMatch[1];
     }
 
-    if (!rawStreamUrl) throw new Error('Ссылка не найдена в исходном коде страницы');
+    if (!rawStreamUrl) {
+      console.log('--- Содержимое HTML (первые 500 символов) ---');
+      console.log(html.slice(0, 500));
+      console.log('-------------------------------------------');
+      throw new Error('Ссылка .m3u8 не найдена в исходном коде страницы');
+    }
 
-    // Убираем маркеры качества вида [720p]
     if (rawStreamUrl.includes(']')) {
       rawStreamUrl = rawStreamUrl.split(']').pop();
     }
 
     console.log('[Tivix] Первичная ссылка:', rawStreamUrl);
 
-    // 3. Переходим по 302-редиректу для получения прямой ссылки с хэшем
+    // Получаем прямую ссылку с хэшем
     let finalStreamUrl = rawStreamUrl;
     try {
       const resRedirect = await fetch(rawStreamUrl, {
-        method: 'GET',
-        headers: headers,
+        headers,
         redirect: 'follow'
       });
-      
       if (resRedirect.url && resRedirect.url !== rawStreamUrl) {
         finalStreamUrl = resRedirect.url;
-        console.log('[Tivix] Успешно получена прямая ссылка с хэшем:', finalStreamUrl);
+        console.log('[Tivix] Финальная ссылка:', finalStreamUrl);
       }
     } catch (e) {
-      console.warn('[Tivix] Предупреждение при редиректе, используем первичную ссылку:', e.message);
+      console.warn('[Tivix] Ошибка при редиректе, используется первичный URL:', e.message);
     }
 
-    // 4. Записываем результат в streams.json
-    const output = { mosfilm: finalStreamUrl };
-    fs.writeFileSync('streams.json', JSON.stringify(output, null, 2));
+    fs.writeFileSync('streams.json', JSON.stringify({ mosfilm: finalStreamUrl }, null, 2));
 
   } catch (err) {
     console.error('[Tivix] Ошибка парсинга:', err.message);
