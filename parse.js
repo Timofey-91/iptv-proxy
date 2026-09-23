@@ -2,7 +2,7 @@ const fs = require('fs');
 
 async function parseStream() {
   // Проверьте точный URL страницы (например: http://rodnoetv.com/mosfilm.html)
-  const TARGET_URL = 'https://smotru.tv/mosfilm-zolotaya-kollektsiya.html'; 
+  const TARGET_URL = 'http://rodnoetv.com/smotret/msflmgold'; 
 
   try {
     const response = await fetch(TARGET_URL, {
