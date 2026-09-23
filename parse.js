@@ -1,25 +1,49 @@
 const fs = require('fs');
 
 async function parseStream() {
+  // Проверьте точный URL страницы (например: http://rodnoetv.com/mosfilm.html)
+  const TARGET_URL = 'http://rodnoetv.com/mosfilm.html'; 
+
   try {
-    const response = await fetch('http://rodnoetv.com/mosfilm.html', {
+    const response = await fetch(TARGET_URL, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cache-Control': 'no-cache'
       }
     });
 
-    const html = await response.text();
-    // Ищем строку file:decode("BASE64")
-    const match = html.match(/file:\s*decode\(["']([^"']+)["']\)/);
+    console.log(`Статус ответа сервера: ${response.status} ${response.statusText}`);
 
-    if (!match || !match[1]) {
-      throw new Error("Не удалось найти Base64 строку");
+    if (!response.ok) {
+      throw new Error(`Сервер вернул ошибку: ${response.status}`);
     }
 
-    const path = Buffer.from(match[1], 'base64').toString('utf-8');
-    const streamUrl = `http://rodnoetv.com${path}`;
+    const html = await response.text();
 
-    // Сохраняем в JSON
+    // 1. Проверяем формат file: decode("...")
+    // 2. Проверяем прямую Base64 строку file: "..."
+    const matchDecode = html.match(/file:\s*decode\(["']([^"']+)["']\)/i);
+    const matchDirect = html.match(/file:\s*["']([^"']+)["']/i);
+
+    const encodedString = matchDecode ? matchDecode[1] : (matchDirect ? matchDirect[1] : null);
+
+    if (!encodedString) {
+      console.error("=== ФРАГМЕНТ HTML ДЛЯ ОТЛАДКИ ===");
+      console.error(html.slice(0, 1000)); // Выводим первые 1000 символов полученной страницы
+      console.error("===============================");
+      throw new Error("Не удалось найти зашифрованную строку файла в коде страницы");
+    }
+
+    // Декодируем из Base64, если строка не начинается сразу с '/' или 'http'
+    let path = encodedString;
+    if (!path.startsWith('/') && !path.startsWith('http')) {
+      path = Buffer.from(encodedString, 'base64').toString('utf-8');
+    }
+
+    const streamUrl = path.startsWith('http') ? path : `http://rodnoetv.com${path}`;
+
     const data = {
       mosfilm: streamUrl,
       updated_at: new Date().toISOString()
@@ -27,8 +51,9 @@ async function parseStream() {
 
     fs.writeFileSync('streams.json', JSON.stringify(data, null, 2));
     console.log('Ссылка успешно обновлена:', streamUrl);
+
   } catch (error) {
-    console.error('Ошибка парсинга:', error);
+    console.error('Ошибка парсинга:', error.message);
     process.exit(1);
   }
 }
