@@ -1,61 +1,52 @@
 const fs = require('fs');
+const axios = require('axios');
 
-async function parseStream() {
-  // Проверьте точный URL страницы (например: http://rodnoetv.com/smotret/msflmgold)
-  const TARGET_URL = 'http://rodnoetv.com/smotret/msflmgold'; 
-
+async function parseTivixMosfilm() {
+  const url = 'http://live.tivix.co/450-mosfilm.html';
+  
   try {
-    const response = await fetch(TARGET_URL, {
+    const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Cache-Control': 'no-cache'
-      }
+        'Referer': 'http://live.tivix.co/'
+      },
+      timeout: 15000
     });
 
-    console.log(`Статус ответа сервера: ${response.status} ${response.statusText}`);
+    const html = response.data;
+    let streamUrl = null;
 
-    if (!response.ok) {
-      throw new Error(`Сервер вернул ошибку: ${response.status}`);
+    // 1. Поиск file: decode("...")
+    const decodeMatch = html.match(/file:\s*decode\(["']([^"']+)["']\)/i);
+    if (decodeMatch) {
+      streamUrl = Buffer.from(decodeMatch[1], 'base64').toString('utf-8');
+    } else {
+      // 2. Поиск прямой ссылки
+      const directMatch = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i);
+      if (directMatch) {
+        streamUrl = directMatch[1];
+      }
     }
 
-    const html = await response.text();
-
-    // 1. Проверяем формат file: decode("...")
-    // 2. Проверяем прямую Base64 строку file: "..."
-    const matchDecode = html.match(/file:\s*decode\(["']([^"']+)["']\)/i);
-    const matchDirect = html.match(/file:\s*["']([^"']+)["']/i);
-
-    const encodedString = matchDecode ? matchDecode[1] : (matchDirect ? matchDirect[1] : null);
-
-    if (!encodedString) {
-      console.error("=== ФРАГМЕНТ HTML ДЛЯ ОТЛАДКИ ===");
-      console.error(html.slice(0, 1000)); // Выводим первые 1000 символов полученной страницы
-      console.error("===============================");
-      throw new Error("Не удалось найти зашифрованную строку файла в коде страницы");
+    if (!streamUrl) {
+      throw new Error('Ссылка .m3u8 не найдена в исходном коде страницы');
     }
 
-    // Декодируем из Base64, если строка не начинается сразу с '/' или 'http'
-    let path = encodedString;
-    if (!path.startsWith('/') && !path.startsWith('http')) {
-      path = Buffer.from(encodedString, 'base64').toString('utf-8');
+    // Убираем селекторы качества [720p]
+    if (streamUrl.includes(']')) {
+      streamUrl = streamUrl.split(']').pop();
     }
 
-    const streamUrl = path.startsWith('http') ? path : `http://rodnoetv.com${path}`;
+    console.log('[Tivix] Найдена ссылка:', streamUrl);
 
-    const data = {
-      mosfilm: streamUrl,
-      updated_at: new Date().toISOString()
-    };
+    // Сохраняем в streams.json
+    const output = { mosfilm: streamUrl };
+    fs.writeFileSync('streams.json', JSON.stringify(output, null, 2));
 
-    fs.writeFileSync('streams.json', JSON.stringify(data, null, 2));
-    console.log('Ссылка успешно обновлена:', streamUrl);
-
-  } catch (error) {
-    console.error('Ошибка парсинга:', error.message);
+  } catch (err) {
+    console.error('[Tivix] Ошибка парсинга:', err.message);
     process.exit(1);
   }
 }
 
-parseStream();
+parseTivixMosfilm();
