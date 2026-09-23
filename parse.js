@@ -4,7 +4,8 @@ async function parseTivixMosfilm() {
   const pageUrl = 'http://live.tivix.co/450-mosfilm.html';
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Referer': 'http://live.tivix.co/'
+    'Referer': 'http://live.tivix.co/',
+    'Origin': 'http://live.tivix.co'
   };
 
   try {
@@ -33,24 +34,29 @@ async function parseTivixMosfilm() {
 
     console.log('[Tivix] Первичная ссылка:', rawStreamUrl);
 
-    // 3. Отключаем автопереход и забираем точный URL из заголовка Location
-    let finalStreamUrl = rawStreamUrl;
-    const resRedirect = await fetch(rawStreamUrl, {
-      method: 'GET',
-      headers: headers,
-      redirect: 'manual'
-    });
+    // 3. Загружаем содержимое первичного .m3u8 плейлиста
+    const playlistRes = await fetch(rawStreamUrl, { headers });
+    if (!playlistRes.ok) throw new Error(` Ошибка загрузки плейлиста: ${playlistRes.status}`);
 
-    const locationHeader = resRedirect.headers.get('location');
-    if (locationHeader) {
-      // Преобразуем относительный URL в абсолютный, если нужно
-      finalStreamUrl = new URL(locationHeader, rawStreamUrl).href;
-      console.log('[Tivix] Перехвачен прямой URL из Location:', finalStreamUrl);
+    const playlistText = await playlistRes.text();
+
+    // 4. Парсим прямую ссылку на поток из тела .m3u8 (фильтруем комментарии #EXT)
+    const lines = playlistText
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && !line.startsWith('#'));
+
+    let finalStreamUrl = rawStreamUrl;
+
+    if (lines.length > 0) {
+      // Преобразуем относительную ссылку (например, /p92j.../index.m3u8) в абсолютный URL
+      finalStreamUrl = new URL(lines[0], rawStreamUrl).href;
+      console.log('[Tivix] Извлечена рабочая прямая ссылка:', finalStreamUrl);
     } else {
-      console.warn('[Tivix] Заголовок Location не получен, сохранен первичный URL');
+      console.warn('[Tivix] Внутри .m3u8 не найдено подссылок, сохранен первичный URL');
     }
 
-    // 4. Записываем в streams.json
+    // 5. Записываем итоговую ссылку в streams.json
     fs.writeFileSync('streams.json', JSON.stringify({ mosfilm: finalStreamUrl }, null, 2));
 
   } catch (err) {
