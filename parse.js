@@ -1,68 +1,120 @@
 const fs = require('fs');
 
-async function parseMosfilm() {
-  // Запрос идет напрямую к плееру cdntvmedia, который отдает плеер для канала 235
-  const playerUrl = 'https://cdntvmedia.com/players/playerjs.php?ch=235&sp=5';
+async function parseSmotruMosfilm() {
+  const pageUrl = 'https://smotru.tv/mosfilm-zolotaya-kollektsiya.html';
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Referer': 'http://live.tivix.co/'
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Referer': 'https://smotru.tv/'
   };
 
   try {
-    const response = await fetch(playerUrl, { headers });
-    if (!response.ok) throw new Error(`Ошибка загрузки плеера: ${response.status}`);
+    console.log(`[Smotru] Запрос страницы: ${pageUrl}`);
+    const response = await fetch(pageUrl, { headers });
+    if (!response.ok) throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
 
     const html = await response.text();
     let rawStreamUrl = null;
 
-    // 1. Ищем file: decode("...") внутри скрипта плеера cdntvmedia
-    const decodeMatch = html.match(/file:\s*decode\(["']([^"']+)["']\)/i);
-    if (decodeMatch) {
-      rawStreamUrl = Buffer.from(decodeMatch[1], 'base64').toString('utf-8');
-    } else {
-      // 2. Альтернативный поиск прямой .m3u8 ссылки
-      const directMatch = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i);
-      if (directMatch) rawStreamUrl = directMatch[1];
+    // 1. Поиск прямого m3u8 или файла в коде страницы
+    const directMatch = html.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i) ||
+                        html.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/i);
+    if (directMatch) {
+      rawStreamUrl = directMatch[1];
+    }
+
+    // 2. Если не нашли, ищем iframe плеере на странице
+    if (!rawStreamUrl) {
+      const iframeMatch = html.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+      if (iframeMatch) {
+        let iframeUrl = iframeMatch[1];
+        if (iframeUrl.startsWith('//')) iframeUrl = 'https:' + iframeUrl;
+        else if (iframeUrl.startsWith('/')) iframeUrl = new URL(iframeUrl, pageUrl).href;
+
+        console.log('[Smotru] Найден iframe, переходим в него:', iframeUrl);
+        const iframeRes = await fetch(iframeUrl, { headers: { ...headers, 'Referer': pageUrl } });
+        const iframeHtml = await iframeRes.text();
+
+        // Ищем m3u8 или decode внутри iframe
+        const iframeDecode = iframeHtml.match(/file:\s*decode\(["']([^"']+)["']\)/i);
+        if (iframeDecode) {
+          rawStreamUrl = Buffer.from(iframeDecode[1], 'base64').toString('utf-8');
+        } else {
+          const iframeDirect = iframeHtml.match(/file:\s*["']([^"']+\.m3u8[^"']*)["']/i) ||
+                               iframeHtml.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/i);
+          if (iframeDirect) rawStreamUrl = iframeDirect[1];
+        }
+      }
+    }
+
+    // 3. Поиск через eval / сжатые скрипты, если стандартные методы не сработали
+    if (!rawStreamUrl) {
+      // Ищем любые упоминания внешних скриптов плееров или доменов потоков
+      const scriptMatches = [...html.matchAll(/src=["']([^"']+\.js[^"']*)["']/g)];
+      for (const match of scriptMatches) {
+        let scriptUrl = match[1];
+        if (scriptUrl.startsWith('//')) scriptUrl = 'https:' + scriptUrl;
+        else if (scriptUrl.startsWith('/')) scriptUrl = new URL(scriptUrl, pageUrl).href;
+        else continue;
+
+        try {
+          const scriptRes = await fetch(scriptUrl, { headers: { ...headers, 'Referer': pageUrl } });
+          const scriptText = await scriptRes.text();
+          const m3u8InScript = scriptText.match(/https?:\/\/[^\s"']+\.m3u8[^\s"']*/i);
+          if (m3u8InScript) {
+            rawStreamUrl = m3u8InScript[0];
+            break;
+          }
+        } catch (e) {
+          // Игнорируем ошибки загрузки сторонних скриптов
+        }
+      }
     }
 
     if (!rawStreamUrl) {
-      console.error('HTML плеера (первые 300 символов):\n', html.slice(0, 300));
-      throw new Error('Ссылка .m3u8 не найдена в коде плеера cdntvmedia');
+      console.log('--- ПРЕВЬЮ HTML (ПЕРВЫЕ 500 СИМВОЛОВ) ---');
+      console.log(html.slice(0, 500));
+      console.log('-----------------------------------------');
+      throw new Error('Ссылка .m3u8 не найдена на странице smotru.tv');
     }
 
     if (rawStreamUrl.includes(']')) {
       rawStreamUrl = rawStreamUrl.split(']').pop();
     }
 
-    console.log('[Player] Первичный URL:', rawStreamUrl);
+    console.log('[Smotru] Найден первичный URL:', rawStreamUrl);
 
-    // 3. Делаем запрос с redirect: 'manual' для перехвата 302 Location (как мы делали раньше)
-    const res302 = await fetch(rawStreamUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': headers['User-Agent'],
-        'Referer': 'https://cdntvmedia.com/',
-        'Origin': 'https://cdntvmedia.com'
-      },
-      redirect: 'manual'
-    });
-
+    // 4. Обработка 302 редиректа для получения финальной рабочей ссылки с хэшем
     let finalStreamUrl = rawStreamUrl;
-    const locationHeader = res302.headers.get('location');
+    try {
+      const res302 = await fetch(rawStreamUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': headers['User-Agent'],
+          'Referer': pageUrl,
+          'Origin': 'https://smotru.tv'
+        },
+        redirect: 'manual'
+      });
 
-    if (locationHeader) {
-      finalStreamUrl = new URL(locationHeader, rawStreamUrl).href;
-      console.log('[Player] Перехвачен прямой URL из Location:', finalStreamUrl);
+      const locationHeader = res302.headers.get('location');
+      if (locationHeader) {
+        finalStreamUrl = new URL(locationHeader, rawStreamUrl).href;
+        console.log('[Smotru] Перехвачен прямой URL из Location:', finalStreamUrl);
+      }
+    } catch (e) {
+      console.warn('[Smotru] Предупреждение при проверке редиректа:', e.message);
     }
 
-    // 4. Сохраняем в streams.json
+    // 5. Запись результата
     fs.writeFileSync('streams.json', JSON.stringify({ mosfilm: finalStreamUrl }, null, 2));
-    console.log('[Player] Успешно сохранено в streams.json');
+    console.log('[Smotru] Успешно записано в streams.json');
 
   } catch (err) {
-    console.error('Ошибка:', err.message);
+    console.error('[Smotru] Ошибка парсинга:', err.message);
     process.exit(1);
   }
 }
 
-parseMosfilm();
+parseSmotruMosfilm();
