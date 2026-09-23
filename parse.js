@@ -2,7 +2,7 @@ const fs = require('fs');
 
 async function parseStream() {
   // Проверьте точный URL страницы (например: http://rodnoetv.com/smotret/msflmgold)
-  const TARGET_URL = 'https://xittv.net/mosfilm.html'; 
+  const TARGET_URL = 'http://rodnoetv.com/smotret/msflmgold'; 
 
   try {
     const response = await fetch(TARGET_URL, {
@@ -42,7 +42,7 @@ async function parseStream() {
       path = Buffer.from(encodedString, 'base64').toString('utf-8');
     }
 
-    const streamUrl = path.startsWith('http') ? path : `http://xittv.net${path}`;
+    const streamUrl = path.startsWith('http') ? path : `http://rodnoetv.com${path}`;
 
     const data = {
       mosfilm: streamUrl,
